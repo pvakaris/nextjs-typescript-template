@@ -4,15 +4,14 @@ import {
   Burger,
   Text,
   useMantineColorScheme,
-  ActionIcon,
+  useMantineTheme,
 } from "@mantine/core";
 import { HeaderProps as Props } from "../pages/_app";
 
-import { IconSun, IconMoonStars } from "@tabler/icons";
+import { ColorModeSwitcher } from "./ColorModeSwitcher";
 
-const AppHeader: React.FC<Props> = ({ theme, opened, setOpened }) => {
-  const { colorScheme, toggleColorScheme } = useMantineColorScheme();
-  const dark = colorScheme === "dark";
+const AppHeader: React.FC<Props> = ({ opened, setOpened }) => {
+  const theme = useMantineTheme();
 
   return (
     <Header height={70} p="md">
@@ -35,14 +34,7 @@ const AppHeader: React.FC<Props> = ({ theme, opened, setOpened }) => {
         </MediaQuery>
 
         <Text>Application header</Text>
-        <ActionIcon
-          variant="outline"
-          color={dark ? "yellow" : "blue"}
-          onClick={() => toggleColorScheme()}
-          title="Toggle color scheme"
-        >
-          {dark ? <IconSun size={18} /> : <IconMoonStars size={18} />}
-        </ActionIcon>
+        <ColorModeSwitcher />
       </div>
     </Header>
   );

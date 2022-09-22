@@ -1,14 +1,11 @@
 import type { AppProps } from "next/app";
-import { MoralisProvider } from "react-moralis";
 import { Dispatch, SetStateAction, useState } from "react";
 import { GetServerSidePropsContext } from "next";
 import {
   AppShell,
-  useMantineTheme,
   ColorSchemeProvider,
   ColorScheme,
   MantineProvider,
-  MantineTheme,
 } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import { getCookie, setCookie } from "cookies-next";
@@ -16,34 +13,50 @@ import AppHeader from "../components/AppHeader";
 import AppNavbar from "../components/AppNavbar";
 import AppSidebar from "../components/AppSidebar";
 
+import {
+  createClient,
+  configureChains,
+  defaultChains,
+  WagmiConfig,
+} from "wagmi";
+import { publicProvider } from "wagmi/providers/public";
+import { SessionProvider } from "next-auth/react";
+
 export interface HeaderProps {
-  theme: MantineTheme;
   opened: boolean;
   setOpened: Dispatch<SetStateAction<boolean>>;
 }
 
-export default function App(props: AppProps & { colorScheme: ColorScheme }) {
-  const { Component, pageProps } = props;
-  const theme = useMantineTheme();
-  const [opened, setOpened] = useState(false);
+const { provider, webSocketProvider } = configureChains(defaultChains, [
+  publicProvider(),
+]);
 
-  //   ---------   For the theme changing   ---------
+const client = createClient({
+  provider,
+  webSocketProvider,
+  autoConnect: true,
+});
+
+export default function MyApp(props: AppProps & { colorScheme: ColorScheme }) {
+  const { Component, pageProps } = props;
+  //   ---------   COLOR MODE   ---------
   const [colorScheme, setColorScheme] = useState<ColorScheme>(
     props.colorScheme
   );
+  const [opened, setOpened] = useState(false);
 
   const toggleColorScheme = (value?: ColorScheme) => {
     const nextColorScheme =
       value || (colorScheme === "dark" ? "light" : "dark");
     setColorScheme(nextColorScheme);
-    // when color scheme is updated save it to cookie
     setCookie("mantine-color-scheme", nextColorScheme, {
-      maxAge: 60 * 60 * 24 * 30,
+      maxAge: 60 * 60 * 24 * 30, // 30 days
     });
   };
+  //   ------------------------------------------------
+
   // A hotkey to switch the current theme to the opposite one
   useHotkeys([["mod+J", () => toggleColorScheme()]]);
-  //   ------------------------------------------------
 
   return (
     <ColorSchemeProvider
@@ -51,35 +64,32 @@ export default function App(props: AppProps & { colorScheme: ColorScheme }) {
       toggleColorScheme={toggleColorScheme}
     >
       <MantineProvider
-        theme={{ colorScheme: colorScheme }}
+        theme={{ colorScheme }}
         withGlobalStyles
         withNormalizeCSS
       >
-        <MoralisProvider
-          appId={process.env.NEXT_PUBLIC_APP_ID!}
-          serverUrl={process.env.NEXT_PUBLIC_SERVER_URL!}
+        <AppShell
+          navbarOffsetBreakpoint="sm"
+          asideOffsetBreakpoint="sm"
+          // Navigation on the left
+          navbar={<AppNavbar opened={opened} />}
+          // Sidebar on the right
+          aside={<AppSidebar />}
+          // Header at the top
+          header={<AppHeader opened={opened} setOpened={setOpened} />}
         >
-          <AppShell
-            navbarOffsetBreakpoint="sm"
-            asideOffsetBreakpoint="sm"
-            // Where the navigation is
-            navbar={<AppNavbar opened={opened} />}
-            // Sidebar on the right
-            aside={<AppSidebar />}
-            // Section at the top
-            header={
-              <AppHeader opened={opened} theme={theme} setOpened={setOpened} />
-            }
-          >
-            <Component {...pageProps} />
-          </AppShell>
-        </MoralisProvider>
+          {/* <WagmiConfig client={client}>
+            <SessionProvider session={pageProps.session} refetchInterval={0}> */}
+          <Component {...pageProps} />
+          {/* </SessionProvider>
+          </WagmiConfig> */}
+        </AppShell>
       </MantineProvider>
     </ColorSchemeProvider>
   );
 }
 
-App.getInitialProps = ({ ctx }: { ctx: GetServerSidePropsContext }) => ({
+MyApp.getInitialProps = ({ ctx }: { ctx: GetServerSidePropsContext }) => ({
   // get color scheme from cookie
   colorScheme: getCookie("mantine-color-scheme", ctx) || "light",
 });
